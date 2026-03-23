@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BoroughLens — London Housing Affordability</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --paper:       #f7f7f2;
+      --paper-warm:  #f0efe8;
+      --panel-bg:    #eeeee6;
+      --border:      #ddddd5;
+      --border-mid:  #c8c8be;
+      --ink:         #1a1a18;
+      --ink-mid:     #4a4a46;
+      --ink-faint:   #8a8a84;
+      --accent:      #2c5282;
+      --accent-light:#ebf0fa;
+      --amber:       #b45309;
+      --amber-light: #fffbeb;
+      --stress-1:    #fee2e2;
+      --stress-2:    #fca5a5;
+      --stress-3:    #f87171;
+      --stress-4:    #ef4444;
+      --stress-5:    #dc2626;
+      --stress-6:    #b91c1c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      height: 44px;
+      background: var(--paper-warm);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 1rem;
+      gap: 1rem;
+      flex-shrink: 0;
+      z-index: 1000;
+    }
+    .nav-logo {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: 0.03em;
+    }
+    .nav-logo span { color: var(--accent); }
+    .nav-subtitle {
+      font-size: 12px;
+      color: var(--ink-faint);
+      border-left: 1px solid var(--border-mid);
+      padding-left: 1rem;
+    }
+    .nav-right {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--ink-faint);
+    }
+
+    /* ── MAIN LAYOUT ── */
+    .layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── CONTROL PANEL ── */
+    .panel {
+      width: 260px;
+      flex-shrink: 0;
+      background: var(--panel-bg);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .panel-section {
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 0.5rem;
+    }
+
+    select, .year-select {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border-mid);
+      border-radius: 4px;
+      background: #fff;
+      font-size: 13px;
+      color: var(--ink);
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a8a84' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      cursor: pointer;
+    }
+    select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    /* ── LAYER TOGGLES ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 5px 0;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--ink-mid);
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .toggle-row.disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── LEGEND ── */
+    .legend-ramp {
+      display: flex;
+      height: 14px;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .legend-ramp div { flex: 1; }
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--ink-faint);
+    }
+
+    /* ── DATA NOTE ── */
+    .data-note {
+      background: var(--amber-light);
+      border: 1px solid #e9c46a;
+      border-radius: 4px;
+      padding: 7px 9px;
+      font-size: 11px;
+      color: var(--amber);
+      line-height: 1.5;
+    }
+
+    /* ── HOW TO USE ── */
+    .how-to {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 11px;
+      color: var(--ink-faint);
+      line-height: 1.8;
+    }
+
+    /* ── MAP ── */
+    #map {
+      flex: 1;
+      background: var(--paper);
+    }
+
+    /* ── TOOLTIP ── */
+    .bl-tooltip {
+      background: rgba(26,26,24,0.93);
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      padding: 8px 11px;
+      font-size: 12px;
+      line-height: 1.6;
+      box-shadow: none;
+      pointer-events: none;
+    }
+    .bl-tooltip strong { font-size: 13px; display: block; margin-bottom: 2px; }
+    .bl-tooltip .stress-high { color: #f87171; }
+    .bl-tooltip .stress-mid  { color: #fbbf24; }
+    .bl-tooltip .stress-low  { color: #6ee7b7; }
+
+    /* ── DETAIL PANEL ── */
+    #detail {
+      position: absolute;
+      top: 44px;
+      right: 0;
+      width: 340px;
+      height: calc(100vh - 44px);
+      background: #fff;
+      border-left: 1px solid var(--border);
+      z-index: 900;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      animation: slideIn 0.18s ease;
+    }
+    #detail.open { display: flex; }
+    @keyframes slideIn {
+      from { transform: translateX(30px); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+
+    .detail-header {
+      background: var(--paper-warm);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1rem 0.8rem;
+      position: relative;
+    }
+    .detail-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .detail-sub {
+      font-size: 11px;
+      color: var(--ink-faint);
+      margin-top: 2px;
+    }
+    .detail-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--border-mid);
+      border-radius: 4px;
+      background: var(--panel-bg);
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--ink-faint);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .detail-close:hover { background: var(--border); }
+
+    .stress-badge {
+      display: inline-block;
+      margin-top: 6px;
+      padding: 2px 10px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .badge-high { background: #fee2e2; color: var(--stress-6); }
+    .badge-mid  { background: #fef9c3; color: #92400e; }
+    .badge-low  { background: #dcfce7; color: #166534; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 0.9rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .stat-card {
+      background: var(--paper-warm);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 8px 10px;
+    }
+    .stat-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 3px;
+    }
+    .stat-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--stress-5);
+    }
+    .stat-value.neutral { color: var(--accent); }
+
+    .detail-section {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      margin-bottom: 0.6rem;
+    }
+
+    /* ── MINI BAR CHART ── */
+    .bar-chart { display: flex; flex-direction: column; gap: 4px; }
+    .bar-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+    .bar-year { width: 42px; color: var(--ink-faint); text-align: right; flex-shrink: 0; }
+    .bar-track { flex: 1; height: 14px; background: var(--paper-warm); border-radius: 2px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+    .bar-val { width: 44px; color: var(--ink-mid); font-size: 11px; }
+
+    /* ── INDICATOR LIST ── */
+    .indicator-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .indicator-row:last-child { border-bottom: none; }
+    .indicator-name { color: var(--ink-mid); }
+    .indicator-val  { font-weight: 600; color: var(--stress-5); }
+    .indicator-val.neutral { color: var(--accent); }
+
+    /* loading */
+    #loading {
+      position: absolute;
+      inset: 0;
+      background: var(--paper);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      font-size: 13px;
+      color: var(--ink-faint);
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 700px) {
+      .panel { width: 200px; }
+      #detail { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading">
+  <div class="spinner"></div>
+  <span>Loading borough data...</span>
+</div>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-logo">Borough<span>Lens</span></div>
+  <div class="nav-subtitle">London Housing Affordability</div>
+  <div class="nav-right">Data: ONS &amp; London Datastore</div>
+</nav>
+
+<!-- Main layout -->
+<div class="layout">
+
+  <!-- Control panel -->
+  <div class="panel">
+
+    <div class="panel-section">
+      <div class="panel-label">Metric</div>
+      <select id="metric-select">
+        <option value="rent_to_income">Rent-to-income ratio</option>
+        <option value="house_price_earnings">House price to earnings</option>
+        <option value="fuel_poverty">Fuel poverty rate</option>
+        <option value="gdhi_per_head">GDHI per head (£)</option>
+      </select>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Year</div>
+      <select id="year-select"></select>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Overlay layers</div>
+      <label class="toggle-row" id="toggle-fuel">
+        <input type="checkbox" id="layer-fuel"> Fuel poverty indicator
+      </label>
+      <label class="toggle-row" id="toggle-rti">
+        <input type="checkbox" id="layer-rti"> Rent-to-income overlay
+      </label>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">Legend — stress level</div>
+      <div class="legend-ramp">
+        <div style="background:var(--stress-1)"></div>
+        <div style="background:var(--stress-2)"></div>
+        <div style="background:var(--stress-3)"></div>
+        <div style="background:var(--stress-4)"></div>
+        <div style="background:var(--stress-5)"></div>
+        <div style="background:var(--stress-6)"></div>
+      </div>
+      <div class="legend-labels">
+        <span id="legend-min">Low</span>
+        <span id="legend-max">High</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="data-note" id="data-note">
+        Source: ONS PRS Statistics<br>
+        2022–23 · Borough level
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-label">How to use</div>
+      <div class="how-to">
+        · Click a borough to explore<br>
+        · Hover for quick stats<br>
+        · Switch metrics above<br>
+        · Toggle overlays to layer data
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <!-- Detail panel -->
+  <div id="detail">
+    <div class="detail-header">
+      <button class="detail-close" id="detail-close">✕</button>
+      <div class="detail-name" id="detail-name">—</div>
+      <div class="detail-sub" id="detail-sub">—</div>
+      <div id="detail-badge"></div>
+    </div>
+    <div class="stat-grid" id="stat-grid"></div>
+    <div class="detail-section" id="chart-section">
+      <div class="detail-section-title" id="chart-title">Trend</div>
+      <div class="bar-chart" id="bar-chart"></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">All indicators — latest year</div>
+      <div id="indicator-list"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+
+const METRICS = {
+  rent_to_income: {
+    label:  'Rent-to-income ratio',
+    unit:   '%',
+    source: 'ONS PRS Statistics + ONS GDHI',
+    period: '2022–23 · Borough level',
+    format: v => v.toFixed(1) + '%',
+    colour: stressColour,
+  },
+  house_price_earnings: {
+    label:  'House price to earnings',
+    unit:   'x',
+    source: 'MHCLG / London Datastore',
+    period: '2002–2024 · Borough level',
+    format: v => v.toFixed(1) + 'x',
+    colour: stressColour,
+  },
+  fuel_poverty: {
+    label:  'Fuel poverty rate',
+    unit:   '%',
+    source: 'DESNZ / London Datastore',
+    period: '2009–2022 · Borough level',
+    format: v => v.toFixed(1) + '%',
+    colour: stressColour,
+  },
+  gdhi_per_head: {
+    label:  'GDHI per head',
+    unit:   '£',
+    source: 'ONS Regional GDHI',
+    period: '1997–2023 · Borough level',
+    format: v => '£' + Math.round(v).toLocaleString(),
+    colour: gdhiColour,
+  },
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+
+let geojson    = null;
+let allData    = {};
+let activeMetric = 'rent_to_income';
+let activeYear   = '2022-23';
+let geojsonLayer = null;
+let selectedLayer = null;
+let map;
+
+// ── COLOUR SCALES ─────────────────────────────────────────────────────────────
+
+const STRESS_RAMP = ['#fee2e2','#fca5a5','#f87171','#ef4444','#dc2626','#b91c1c'];
+
+function stressColour(val, min, max) {
+  if (val == null) return '#e8e7e0';
+  const t = Math.max(0, Math.min(1, (val - min) / (max - min)));
+  const i = Math.min(5, Math.floor(t * 6));
+  return STRESS_RAMP[i];
+}
+
+// GDHI inverts — higher income = better, so use blue (low) to green (high)
+const GDHI_RAMP = ['#dbeafe','#bfdbfe','#93c5fd','#60a5fa','#3b82f6','#1d4ed8'];
+function gdhiColour(val, min, max) {
+  if (val == null) return '#e8e7e0';
+  const t = Math.max(0, Math.min(1, (val - min) / (max - min)));
+  const i = Math.min(5, Math.floor(t * 6));
+  return GDHI_RAMP[i];
+}
+
+// ── DATA LOADING ──────────────────────────────────────────────────────────────
+
+async function loadAll() {
+  const files = [
+    'data/london_boroughs.geojson',
+    'data/rent_to_income.json',
+    'data/house_price_earnings.json',
+    'data/fuel_poverty.json',
+    'data/gdhi_per_head.json',
+  ];
+  const [geo, rti, hpe, fp, gdhi] = await Promise.all(files.map(f => fetch(f).then(r => r.json())));
+
+  geojson = geo;
+  allData = {
+    rent_to_income:       indexByCode(rti.boroughs),
+    house_price_earnings: indexByCode(hpe.boroughs),
+    fuel_poverty:         indexByCode(fp.boroughs),
+    gdhi_per_head:        indexByCode(gdhi.boroughs),
+  };
+  return { rti, hpe, fp, gdhi };
+}
+
+function indexByCode(boroughs) {
+  const map = {};
+  boroughs.forEach(b => { map[b.ons_code] = b; });
+  return map;
+}
+
+// ── MAP INIT ──────────────────────────────────────────────────────────────────
+
+function initMap() {
+  map = L.map('map', {
+    center: [51.505, -0.09],
+    zoom: 10,
+    zoomControl: true,
+    attributionControl: true,
+  });
+
+  // Minimal tile layer — muted to let choropleth colours read clearly
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 14,
+  }).addTo(map);
+}
+
+// ── CHOROPLETH ────────────────────────────────────────────────────────────────
+
+function getValues(metric, year) {
+  const data = allData[metric];
+  if (!data) return {};
+  const vals = {};
+  Object.entries(data).forEach(([code, b]) => {
+    vals[code] = b.values?.[year] ?? null;
+  });
+  return vals;
+}
+
+function renderChoropleth() {
+  if (geojsonLayer) geojsonLayer.remove();
+
+  const vals   = getValues(activeMetric, activeYear);
+  const nums   = Object.values(vals).filter(v => v != null);
+  const min    = Math.min(...nums);
+  const max    = Math.max(...nums);
+  const colFn  = METRICS[activeMetric].colour;
+  const fmtFn  = METRICS[activeMetric].format;
+
+  // Update legend
+  document.getElementById('legend-min').textContent = fmtFn(min);
+  document.getElementById('legend-max').textContent = fmtFn(max);
+
+  geojsonLayer = L.geoJSON(geojson, {
+    style: feature => {
+      const code = feature.properties.gss_code || feature.properties.GSS_CODE || feature.properties.code;
+      const val  = vals[code];
+      return {
+        fillColor:   colFn(val, min, max),
+        fillOpacity: 0.82,
+        color:       '#ffffff',
+        weight:      1.5,
+        opacity:     1,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      const code = feature.properties.gss_code || feature.properties.GSS_CODE || feature.properties.code;
+      const name = feature.properties.name || feature.properties.NAME || feature.properties.Borough;
+      const val  = vals[code];
+
+      // Tooltip on hover
+      layer.on('mouseover', function(e) {
+        this.setStyle({ weight: 2.5, color: '#1a1a18' });
+        const label = val != null ? fmtFn(val) : 'No data';
+        const stressClass = val == null ? '' : val > (max * 0.66) ? 'stress-high' : val > (max * 0.33) ? 'stress-mid' : 'stress-low';
+        const stressText  = val == null ? '' : val > (max * 0.66) ? 'High stress' : val > (max * 0.33) ? 'Moderate' : 'Low stress';
+        this.bindTooltip(`
+          <strong>${name}</strong>
+          ${METRICS[activeMetric].label}: <b>${label}</b><br>
+          <span class="${stressClass}">${stressText}</span>
+        `, { className: 'bl-tooltip', sticky: true }).openTooltip(e.latlng);
+      });
+
+      layer.on('mouseout', function() {
+        if (this !== selectedLayer) {
+          geojsonLayer.resetStyle(this);
+        }
+        this.closeTooltip();
+      });
+
+      // Click → detail panel
+      layer.on('click', function() {
+        if (selectedLayer && selectedLayer !== this) {
+          geojsonLayer.resetStyle(selectedLayer);
+        }
+        selectedLayer = this;
+        this.setStyle({ weight: 3, color: '#1a1a18' });
+        openDetail(code, name);
+      });
+    },
+  }).addTo(map);
+
+  map.fitBounds(geojsonLayer.getBounds(), { padding: [20, 20] });
+}
+
+// ── YEAR SELECTOR ─────────────────────────────────────────────────────────────
+
+function populateYears(metric) {
+  const sel = document.getElementById('year-select');
+  const data = Object.values(allData[metric])[0];
+  if (!data) return;
+  const years = Object.keys(data.values).sort().reverse();
+  sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  activeYear = years[0];
+}
+
+// ── DETAIL PANEL ──────────────────────────────────────────────────────────────
+
+function openDetail(code, name) {
+  const panel = document.getElementById('detail');
+  panel.classList.add('open');
+
+  document.getElementById('detail-name').textContent = name;
+
+  // Determine inner/outer
+  const innerCodes = ['E09000001','E09000007','E09000012','E09000013','E09000014',
+    'E09000019','E09000020','E09000022','E09000023','E09000025',
+    'E09000028','E09000030','E09000032','E09000033'];
+  const zone = innerCodes.includes(code) ? 'Inner London' : 'Outer London';
+  document.getElementById('detail-sub').textContent = `${zone} · ${activeYear} data`;
+
+  // Current metric value
+  const metricData = allData[activeMetric]?.[code];
+  const currentVal = metricData?.values?.[activeYear];
+  const fmtFn = METRICS[activeMetric].format;
+
+  // All metric values for latest year
+  const rtiVal  = allData.rent_to_income?.[code]?.values?.['2022-23'];
+  const fpVal   = allData.fuel_poverty?.[code]?.values?.['2022'] ?? allData.fuel_poverty?.[code]?.values?.['2017'];
+  const hpeVal  = allData.house_price_earnings?.[code]?.values?.['2024'] ?? allData.house_price_earnings?.[code]?.values?.['2023'];
+  const gdhiVal = allData.gdhi_per_head?.[code]?.values?.['2023'] ?? allData.gdhi_per_head?.[code]?.values?.['2022'];
+
+  // Stress badge
+  const allNums = Object.values(allData[activeMetric]).map(b => b.values?.[activeYear]).filter(v => v != null);
+  const max = Math.max(...allNums);
+  const badge = document.getElementById('detail-badge');
+  if (currentVal != null) {
+    const t = currentVal / max;
+    if (activeMetric === 'gdhi_per_head') {
+      badge.innerHTML = t > 0.66
+        ? '<span class="stress-badge badge-low">Higher income</span>'
+        : t > 0.33
+        ? '<span class="stress-badge badge-mid">Mid income</span>'
+        : '<span class="stress-badge badge-high">Lower income</span>';
+    } else {
+      badge.innerHTML = t > 0.66
+        ? '<span class="stress-badge badge-high">High stress</span>'
+        : t > 0.33
+        ? '<span class="stress-badge badge-mid">Moderate</span>'
+        : '<span class="stress-badge badge-low">Low stress</span>';
+    }
+  } else {
+    badge.innerHTML = '';
+  }
+
+  // Stat cards
+  document.getElementById('stat-grid').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Rent-to-income</div>
+      <div class="stat-value">${rtiVal != null ? rtiVal.toFixed(1) + '%' : '—'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Fuel poverty</div>
+      <div class="stat-value">${fpVal != null ? fpVal.toFixed(1) + '%' : '—'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">House price / earnings</div>
+      <div class="stat-value neutral">${hpeVal != null ? hpeVal.toFixed(1) + 'x' : '—'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">GDHI per head</div>
+      <div class="stat-value neutral">${gdhiVal != null ? '£' + Math.round(gdhiVal).toLocaleString() : '—'}</div>
+    </div>
+  `;
+
+  // Bar chart — current metric over time
+  const metricValues = metricData?.values || {};
+  const years = Object.keys(metricValues).sort();
+  const chartVals = years.map(y => metricValues[y]).filter(v => v != null);
+  const chartMax = Math.max(...chartVals);
+  const chartMin = Math.min(...chartVals);
+
+  document.getElementById('chart-title').textContent =
+    `${METRICS[activeMetric].label} over time`;
+
+  const recentYears = years.slice(-8); // show last 8 years max
+  document.getElementById('bar-chart').innerHTML = recentYears.map(year => {
+    const v = metricValues[year];
+    if (v == null) return '';
+    const pct = chartMax > chartMin ? ((v - chartMin) / (chartMax - chartMin)) * 100 : 50;
+    const colour = activeMetric === 'gdhi_per_head' ? '#3b82f6' : '#ef4444';
+    return `
+      <div class="bar-row">
+        <div class="bar-year">${year}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${pct}%;background:${colour}"></div>
+        </div>
+        <div class="bar-val">${fmtFn(v)}</div>
+      </div>
+    `;
+  }).join('');
+
+  // Indicator list
+  document.getElementById('indicator-list').innerHTML = `
+    <div class="indicator-row">
+      <span class="indicator-name">Rent-to-income (2022–23)</span>
+      <span class="indicator-val">${rtiVal != null ? rtiVal.toFixed(1) + '%' : '—'}</span>
+    </div>
+    <div class="indicator-row">
+      <span class="indicator-name">Fuel poverty rate (2022)</span>
+      <span class="indicator-val">${fpVal != null ? fpVal.toFixed(1) + '%' : '—'}</span>
+    </div>
+    <div class="indicator-row">
+      <span class="indicator-name">House price / earnings (2024)</span>
+      <span class="indicator-val neutral">${hpeVal != null ? hpeVal.toFixed(1) + 'x' : '—'}</span>
+    </div>
+    <div class="indicator-row">
+      <span class="indicator-name">GDHI per head (2023)</span>
+      <span class="indicator-val neutral">${gdhiVal != null ? '£' + Math.round(gdhiVal).toLocaleString() : '—'}</span>
+    </div>
+  `;
+}
+
+function closeDetail() {
+  document.getElementById('detail').classList.remove('open');
+  if (selectedLayer) {
+    geojsonLayer.resetStyle(selectedLayer);
+    selectedLayer = null;
+  }
+}
+
+// ── DATA NOTE ─────────────────────────────────────────────────────────────────
+
+function updateDataNote(metric, year) {
+  const m = METRICS[metric];
+  document.getElementById('data-note').innerHTML =
+    `Source: ${m.source}<br>${year} · Borough level`;
+}
+
+// ── EVENTS ────────────────────────────────────────────────────────────────────
+
+document.getElementById('metric-select').addEventListener('change', e => {
+  activeMetric = e.target.value;
+  populateYears(activeMetric);
+  updateDataNote(activeMetric, activeYear);
+  renderChoropleth();
+  closeDetail();
+});
+
+document.getElementById('year-select').addEventListener('change', e => {
+  activeYear = e.target.value;
+  updateDataNote(activeMetric, activeYear);
+  renderChoropleth();
+  closeDetail();
+});
+
+document.getElementById('detail-close').addEventListener('click', closeDetail);
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+
+(async () => {
+  try {
+    initMap();
+    await loadAll();
+    populateYears(activeMetric);
+    updateDataNote(activeMetric, activeYear);
+    renderChoropleth();
+    document.getElementById('loading').style.display = 'none';
+  } catch (err) {
+    document.getElementById('loading').innerHTML =
+      `<span style="color:#b91c1c">Failed to load data: ${err.message}</span>`;
+    console.error(err);
+  }
+})();
+</script>
+</body>
+</html>

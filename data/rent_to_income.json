@@ -1,0 +1,310 @@
+{
+  "metric": "rent_to_income",
+  "description": "Median monthly rent as % of estimated monthly income by borough",
+  "source": "Derived: ONS PRS Statistics (rent) + ONS GDHI (income)",
+  "years": [
+    "2022-23"
+  ],
+  "derived": true,
+  "derivation": "median_monthly_rent / (gdhi_per_head_2022 / 12) * 100",
+  "periodicity_note": "PRS data covers Oct 2022\u2013Sep 2023; GDHI aligned to calendar year 2022",
+  "boroughs": [
+    {
+      "ons_code": "E09000001",
+      "name": "City of London",
+      "rent_monthly": 2159.0,
+      "gdhi_annual_2022": 144079,
+      "values": {
+        "2022-23": 17.98
+      }
+    },
+    {
+      "ons_code": "E09000002",
+      "name": "Barking and Dagenham",
+      "rent_monthly": 1350.0,
+      "gdhi_annual_2022": 19492,
+      "values": {
+        "2022-23": 83.11
+      }
+    },
+    {
+      "ons_code": "E09000003",
+      "name": "Barnet",
+      "rent_monthly": 1550.0,
+      "gdhi_annual_2022": 33473,
+      "values": {
+        "2022-23": 55.57
+      }
+    },
+    {
+      "ons_code": "E09000004",
+      "name": "Bexley",
+      "rent_monthly": 1350.0,
+      "gdhi_annual_2022": 23976,
+      "values": {
+        "2022-23": 67.57
+      }
+    },
+    {
+      "ons_code": "E09000005",
+      "name": "Brent",
+      "rent_monthly": 1600.0,
+      "gdhi_annual_2022": 27396,
+      "values": {
+        "2022-23": 70.08
+      }
+    },
+    {
+      "ons_code": "E09000006",
+      "name": "Bromley",
+      "rent_monthly": 1400.0,
+      "gdhi_annual_2022": 31237,
+      "values": {
+        "2022-23": 53.78
+      }
+    },
+    {
+      "ons_code": "E09000007",
+      "name": "Camden",
+      "rent_monthly": 2102.0,
+      "gdhi_annual_2022": 56704,
+      "values": {
+        "2022-23": 44.48
+      }
+    },
+    {
+      "ons_code": "E09000008",
+      "name": "Croydon",
+      "rent_monthly": 1250.0,
+      "gdhi_annual_2022": 25146,
+      "values": {
+        "2022-23": 59.65
+      }
+    },
+    {
+      "ons_code": "E09000009",
+      "name": "Ealing",
+      "rent_monthly": 1569.0,
+      "gdhi_annual_2022": 28014,
+      "values": {
+        "2022-23": 67.21
+      }
+    },
+    {
+      "ons_code": "E09000010",
+      "name": "Enfield",
+      "rent_monthly": 1450.0,
+      "gdhi_annual_2022": 25633,
+      "values": {
+        "2022-23": 67.88
+      }
+    },
+    {
+      "ons_code": "E09000011",
+      "name": "Greenwich",
+      "rent_monthly": 1600.0,
+      "gdhi_annual_2022": 26382,
+      "values": {
+        "2022-23": 72.78
+      }
+    },
+    {
+      "ons_code": "E09000012",
+      "name": "Hackney",
+      "rent_monthly": 1850.0,
+      "gdhi_annual_2022": 31800,
+      "values": {
+        "2022-23": 69.81
+      }
+    },
+    {
+      "ons_code": "E09000013",
+      "name": "Hammersmith and Fulham",
+      "rent_monthly": 1950.0,
+      "gdhi_annual_2022": 46050,
+      "values": {
+        "2022-23": 50.81
+      }
+    },
+    {
+      "ons_code": "E09000014",
+      "name": "Haringey",
+      "rent_monthly": 1600.0,
+      "gdhi_annual_2022": 34179,
+      "values": {
+        "2022-23": 56.17
+      }
+    },
+    {
+      "ons_code": "E09000015",
+      "name": "Harrow",
+      "rent_monthly": 1500.0,
+      "gdhi_annual_2022": 28550,
+      "values": {
+        "2022-23": 63.05
+      }
+    },
+    {
+      "ons_code": "E09000016",
+      "name": "Havering",
+      "rent_monthly": 1300.0,
+      "gdhi_annual_2022": 25044,
+      "values": {
+        "2022-23": 62.29
+      }
+    },
+    {
+      "ons_code": "E09000017",
+      "name": "Hillingdon",
+      "rent_monthly": 1350.0,
+      "gdhi_annual_2022": 23911,
+      "values": {
+        "2022-23": 67.75
+      }
+    },
+    {
+      "ons_code": "E09000018",
+      "name": "Hounslow",
+      "rent_monthly": 1500.0,
+      "gdhi_annual_2022": 26484,
+      "values": {
+        "2022-23": 67.97
+      }
+    },
+    {
+      "ons_code": "E09000019",
+      "name": "Islington",
+      "rent_monthly": 2025.0,
+      "gdhi_annual_2022": 38732,
+      "values": {
+        "2022-23": 62.74
+      }
+    },
+    {
+      "ons_code": "E09000020",
+      "name": "Kensington and Chelsea",
+      "rent_monthly": 2557.0,
+      "gdhi_annual_2022": 98459,
+      "values": {
+        "2022-23": 31.16
+      }
+    },
+    {
+      "ons_code": "E09000021",
+      "name": "Kingston upon Thames",
+      "rent_monthly": 1500.0,
+      "gdhi_annual_2022": 31230,
+      "values": {
+        "2022-23": 57.64
+      }
+    },
+    {
+      "ons_code": "E09000022",
+      "name": "Lambeth",
+      "rent_monthly": 1800.0,
+      "gdhi_annual_2022": 32953,
+      "values": {
+        "2022-23": 65.55
+      }
+    },
+    {
+      "ons_code": "E09000023",
+      "name": "Lewisham",
+      "rent_monthly": 1425.0,
+      "gdhi_annual_2022": 27212,
+      "values": {
+        "2022-23": 62.84
+      }
+    },
+    {
+      "ons_code": "E09000024",
+      "name": "Merton",
+      "rent_monthly": 1600.0,
+      "gdhi_annual_2022": 33938,
+      "values": {
+        "2022-23": 56.57
+      }
+    },
+    {
+      "ons_code": "E09000025",
+      "name": "Newham",
+      "rent_monthly": 1600.0,
+      "gdhi_annual_2022": 22726,
+      "values": {
+        "2022-23": 84.48
+      }
+    },
+    {
+      "ons_code": "E09000026",
+      "name": "Redbridge",
+      "rent_monthly": 1400.0,
+      "gdhi_annual_2022": 25296,
+      "values": {
+        "2022-23": 66.41
+      }
+    },
+    {
+      "ons_code": "E09000027",
+      "name": "Richmond upon Thames",
+      "rent_monthly": 1664.0,
+      "gdhi_annual_2022": 45042,
+      "values": {
+        "2022-23": 44.33
+      }
+    },
+    {
+      "ons_code": "E09000028",
+      "name": "Southwark",
+      "rent_monthly": 1820.0,
+      "gdhi_annual_2022": 32460,
+      "values": {
+        "2022-23": 67.28
+      }
+    },
+    {
+      "ons_code": "E09000029",
+      "name": "Sutton",
+      "rent_monthly": 1200.0,
+      "gdhi_annual_2022": 25284,
+      "values": {
+        "2022-23": 56.95
+      }
+    },
+    {
+      "ons_code": "E09000030",
+      "name": "Tower Hamlets",
+      "rent_monthly": 1900.0,
+      "gdhi_annual_2022": 29613,
+      "values": {
+        "2022-23": 76.99
+      }
+    },
+    {
+      "ons_code": "E09000031",
+      "name": "Waltham Forest",
+      "rent_monthly": 1450.0,
+      "gdhi_annual_2022": 25739,
+      "values": {
+        "2022-23": 67.6
+      }
+    },
+    {
+      "ons_code": "E09000032",
+      "name": "Wandsworth",
+      "rent_monthly": 1900.0,
+      "gdhi_annual_2022": 43967,
+      "values": {
+        "2022-23": 51.86
+      }
+    },
+    {
+      "ons_code": "E09000033",
+      "name": "Westminster",
+      "rent_monthly": 2622.0,
+      "gdhi_annual_2022": 71011,
+      "values": {
+        "2022-23": 44.31
+      }
+    }
+  ]
+}
