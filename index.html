@@ -802,12 +802,120 @@ function updateDataNote(metric, year) {
     `Source: ${m.source}<br>${year} · Borough level`;
 }
 
+// ── OVERLAY LAYERS ────────────────────────────────────────────────────────────
+
+let fuelOverlayLayer = null;
+let rtiOverlayLayer  = null;
+
+function buildFuelOverlay() {
+  if (fuelOverlayLayer) fuelOverlayLayer.remove();
+
+  const fpData = allData.fuel_poverty;
+  if (!fpData) return;
+
+  // Get latest available fuel poverty year per borough
+  const markers = [];
+  geojson.features.forEach(feature => {
+    const code = feature.properties.gss_code;
+    const name = feature.properties.name;
+    if (!code || !fpData[code]) return;
+
+    const values = fpData[code].values;
+    const latestYear = Object.keys(values).sort().reverse()[0];
+    const rate = values[latestYear];
+    if (rate == null) return;
+
+    // Get borough centroid from bounds
+    const layer = L.geoJSON(feature);
+    const centre = layer.getBounds().getCenter();
+
+    // Circle radius scaled to fuel poverty rate (range roughly 5–20%)
+    const radius = (rate / 20) * 18000;
+
+    const circle = L.circle(centre, {
+      radius,
+      color:       '#b45309',
+      fillColor:   '#fbbf24',
+      fillOpacity: 0.35,
+      weight:      1.5,
+      opacity:     0.8,
+    }).bindTooltip(
+      `<strong>${name}</strong><br>Fuel poverty (${latestYear}): <b>${rate.toFixed(1)}%</b>`,
+      { className: 'bl-tooltip', sticky: true }
+    );
+
+    markers.push(circle);
+  });
+
+  fuelOverlayLayer = L.layerGroup(markers).addTo(map);
+}
+
+function buildRtiOverlay() {
+  if (rtiOverlayLayer) rtiOverlayLayer.remove();
+
+  const rtiData = allData.rent_to_income;
+  if (!rtiData) return;
+
+  // Calculate London average rent-to-income
+  const vals = Object.values(rtiData)
+    .map(b => b.values?.['2022-23'])
+    .filter(v => v != null);
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+
+  // Highlight boroughs ABOVE average with a thick orange border
+  const layers = [];
+  geojson.features.forEach(feature => {
+    const code = feature.properties.gss_code;
+    const name = feature.properties.name;
+    if (!code || !rtiData[code]) return;
+
+    const val = rtiData[code].values?.['2022-23'];
+    if (val == null || val <= avg) return;
+
+    const highlight = L.geoJSON(feature, {
+      style: {
+        fillColor:   'transparent',
+        fillOpacity: 0,
+        color:       '#b45309',
+        weight:      3,
+        opacity:     0.9,
+        dashArray:   '6 3',
+      },
+    }).bindTooltip(
+      `<strong>${name}</strong><br>Rent-to-income: <b>${val.toFixed(1)}%</b><br><span style="color:#fbbf24">Above London avg (${avg.toFixed(1)}%)</span>`,
+      { className: 'bl-tooltip', sticky: true }
+    );
+
+    layers.push(highlight);
+  });
+
+  rtiOverlayLayer = L.layerGroup(layers).addTo(map);
+}
+
+function removeOverlays() {
+  if (fuelOverlayLayer) { fuelOverlayLayer.remove(); fuelOverlayLayer = null; }
+  if (rtiOverlayLayer)  { rtiOverlayLayer.remove();  rtiOverlayLayer  = null; }
+  document.getElementById('layer-fuel').checked = false;
+  document.getElementById('layer-rti').checked  = false;
+}
+
 // ── EVENTS ────────────────────────────────────────────────────────────────────
+
+document.getElementById('layer-fuel').addEventListener('change', e => {
+  if (e.target.checked) buildFuelOverlay();
+  else if (fuelOverlayLayer) { fuelOverlayLayer.remove(); fuelOverlayLayer = null; }
+});
+
+document.getElementById('layer-rti').addEventListener('change', e => {
+  if (e.target.checked) buildRtiOverlay();
+  else if (rtiOverlayLayer) { rtiOverlayLayer.remove(); rtiOverlayLayer = null; }
+});
 
 document.getElementById('metric-select').addEventListener('change', e => {
   activeMetric = e.target.value;
   populateYears(activeMetric);
   updateDataNote(activeMetric, activeYear);
+  removeOverlays();
   renderChoropleth();
   closeDetail();
 });
@@ -815,6 +923,7 @@ document.getElementById('metric-select').addEventListener('change', e => {
 document.getElementById('year-select').addEventListener('change', e => {
   activeYear = e.target.value;
   updateDataNote(activeMetric, activeYear);
+  removeOverlays();
   renderChoropleth();
   closeDetail();
 });
