@@ -355,6 +355,8 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .search-active { background: var(--accent-light) !important; color: var(--accent); }
+
     @media (max-width: 700px) {
       .panel { width: 200px; }
       #detail { width: 100%; }
@@ -383,6 +385,15 @@
   <div class="panel">
 
     <div class="panel-section">
+      <div class="panel-label">Search borough</div>
+      <div style="position:relative;">
+        <input type="text" id="borough-search" placeholder="e.g. Hackney..." autocomplete="off"
+          style="width:100%;padding:7px 10px;border:1px solid var(--border-mid);border-radius:4px;background:#fff;font-size:13px;color:var(--ink);outline:none;">
+        <div id="search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border-mid);border-top:none;border-radius:0 0 4px 4px;z-index:2000;max-height:180px;overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <div class="panel-section">
       <div class="panel-label">Metric</div>
       <select id="metric-select">
         <option value="rent_to_income">Rent-to-income ratio</option>
@@ -400,15 +411,11 @@
     <div class="panel-section">
       <div class="panel-label">Overlay layers</div>
       <label class="toggle-row" id="toggle-fuel">
-        <input type="checkbox" id="layer-fuel"> Fuel poverty — above avg boroughs
+        <input type="checkbox" id="layer-fuel"> Fuel poverty indicator
       </label>
       <label class="toggle-row" id="toggle-rti">
-        <input type="checkbox" id="layer-rti"> Rent-to-income — above avg boroughs
+        <input type="checkbox" id="layer-rti"> Rent-to-income overlay
       </label>
-      <div style="margin-top:8px;font-size:11px;color:var(--ink-faint);line-height:1.8;">
-        <span style="display:inline-block;width:18px;height:3px;background:#b45309;border:1px dashed #b45309;vertical-align:middle;margin-right:5px;"></span>High fuel poverty<br>
-        <span style="display:inline-block;width:18px;height:3px;background:#1d4ed8;vertical-align:middle;margin-right:5px;"></span>High rent burden
-      </div>
     </div>
 
     <div class="panel-section">
@@ -817,16 +824,8 @@ function buildFuelOverlay() {
   const fpData = allData.fuel_poverty;
   if (!fpData) return;
 
-  // Calculate London average fuel poverty rate
-  const allRates = Object.values(fpData)
-    .map(b => { const y = Object.keys(b.values).sort().reverse()[0]; return b.values[y]; })
-    .filter(v => v != null);
-  const avg = allRates.reduce((a, b) => a + b, 0) / allRates.length;
-
-  // Highlight boroughs ABOVE average fuel poverty with an amber fill + dashed border
-  // Designed to overlay on top of the base choropleth to show compounded stress —
-  // boroughs where BOTH the primary metric AND fuel poverty are elevated
-  const layers = [];
+  // Get latest available fuel poverty year per borough
+  const markers = [];
   geojson.features.forEach(feature => {
     const code = feature.properties.gss_code;
     const name = feature.properties.name;
@@ -835,28 +834,31 @@ function buildFuelOverlay() {
     const values = fpData[code].values;
     const latestYear = Object.keys(values).sort().reverse()[0];
     const rate = values[latestYear];
-    if (rate == null || rate <= avg) return;
+    if (rate == null) return;
 
-    const highlight = L.geoJSON(feature, {
-      style: {
-        fillColor:   '#b45309',
-        fillOpacity: 0.22,
-        color:       '#b45309',
-        weight:      2,
-        opacity:     0.7,
-        dashArray:   '4 3',
-      },
+    // Get borough centroid from bounds
+    const layer = L.geoJSON(feature);
+    const centre = layer.getBounds().getCenter();
+
+    // Circle radius scaled to fuel poverty rate (range roughly 5–20%)
+    const radius = (rate / 20) * 18000;
+
+    const circle = L.circle(centre, {
+      radius,
+      color:       '#b45309',
+      fillColor:   '#fbbf24',
+      fillOpacity: 0.35,
+      weight:      1.5,
+      opacity:     0.8,
     }).bindTooltip(
-      `<strong>${name}</strong><br>` +
-      `Fuel poverty (${latestYear}): <b>${rate.toFixed(1)}%</b><br>` +
-      `<span style="color:#fbbf24">Above London avg (${avg.toFixed(1)}%) — compounded stress</span>`,
+      `<strong>${name}</strong><br>Fuel poverty (${latestYear}): <b>${rate.toFixed(1)}%</b>`,
       { className: 'bl-tooltip', sticky: true }
     );
 
-    layers.push(highlight);
+    markers.push(circle);
   });
 
-  fuelOverlayLayer = L.layerGroup(layers).addTo(map);
+  fuelOverlayLayer = L.layerGroup(markers).addTo(map);
 }
 
 function buildRtiOverlay() {
@@ -885,13 +887,13 @@ function buildRtiOverlay() {
       style: {
         fillColor:   'transparent',
         fillOpacity: 0,
-        color:       '#1d4ed8',
-        weight:      3.5,
-        opacity:     0.85,
-        dashArray:   null,
+        color:       '#b45309',
+        weight:      3,
+        opacity:     0.9,
+        dashArray:   '6 3',
       },
     }).bindTooltip(
-      `<strong>${name}</strong><br>Rent-to-income: <b>${val.toFixed(1)}%</b><br><span style="color:#93c5fd">Above London avg (${avg.toFixed(1)}%)</span>`,
+      `<strong>${name}</strong><br>Rent-to-income: <b>${val.toFixed(1)}%</b><br><span style="color:#fbbf24">Above London avg (${avg.toFixed(1)}%)</span>`,
       { className: 'bl-tooltip', sticky: true }
     );
 
@@ -939,6 +941,91 @@ document.getElementById('year-select').addEventListener('change', e => {
 
 document.getElementById('detail-close').addEventListener('click', closeDetail);
 
+// ── BOROUGH SEARCH ───────────────────────────────────────────────────────────
+
+function initSearch() {
+  const input   = document.getElementById('borough-search');
+  const results = document.getElementById('search-results');
+
+  // Build name → code lookup from loaded GeoJSON
+  const boroughNames = geojson.features.map(f => ({
+    name: f.properties.name,
+    code: f.properties.gss_code,
+  })).filter(b => b.name && b.code).sort((a, b) => a.name.localeCompare(b.name));
+
+  input.addEventListener('input', () => {
+    const query = input.value.trim().toLowerCase();
+    results.innerHTML = '';
+
+    if (query.length < 1) { results.style.display = 'none'; return; }
+
+    const matches = boroughNames.filter(b => b.name.toLowerCase().includes(query));
+    if (matches.length === 0) { results.style.display = 'none'; return; }
+
+    matches.forEach(b => {
+      const item = document.createElement('div');
+      item.textContent = b.name;
+      item.style.cssText = 'padding:7px 10px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border);color:var(--ink);';
+      item.addEventListener('mouseenter', () => item.style.background = 'var(--paper-warm)');
+      item.addEventListener('mouseleave', () => item.style.background = '#fff');
+      item.addEventListener('click', () => {
+        input.value = b.name;
+        results.style.display = 'none';
+        selectBorough(b.code, b.name);
+      });
+      results.appendChild(item);
+    });
+
+    results.style.display = 'block';
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', e => {
+    if (!input.contains(e.target) && !results.contains(e.target)) {
+      results.style.display = 'none';
+    }
+  });
+
+  // Keyboard navigation
+  input.addEventListener('keydown', e => {
+    const items = results.querySelectorAll('div');
+    const active = results.querySelector('.search-active');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!active) items[0]?.classList.add('search-active');
+      else { active.classList.remove('search-active'); (active.nextSibling || items[0])?.classList.add('search-active'); }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (active) { active.classList.remove('search-active'); (active.previousSibling || items[items.length-1])?.classList.add('search-active'); }
+    } else if (e.key === 'Enter') {
+      const activeItem = results.querySelector('.search-active');
+      if (activeItem) activeItem.click();
+    } else if (e.key === 'Escape') {
+      results.style.display = 'none';
+    }
+  });
+}
+
+function selectBorough(code, name) {
+  // Find and zoom to the borough on the map
+  let targetLayer = null;
+  geojsonLayer.eachLayer(layer => {
+    const lCode = layer.feature?.properties?.gss_code;
+    if (lCode === code) targetLayer = layer;
+  });
+
+  if (targetLayer) {
+    // Reset previously selected
+    if (selectedLayer && selectedLayer !== targetLayer) {
+      geojsonLayer.resetStyle(selectedLayer);
+    }
+    selectedLayer = targetLayer;
+    targetLayer.setStyle({ weight: 3, color: '#1a1a18' });
+    map.fitBounds(targetLayer.getBounds(), { padding: [60, 60], maxZoom: 13 });
+    openDetail(code, name);
+  }
+}
+
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 
 (async () => {
@@ -948,10 +1035,11 @@ document.getElementById('detail-close').addEventListener('click', closeDetail);
     populateYears(activeMetric);
     updateDataNote(activeMetric, activeYear);
     renderChoropleth();
+    initSearch();
     document.getElementById('loading').style.display = 'none';
   } catch (err) {
     document.getElementById('loading').innerHTML =
-      `<span style="color:#b91c1c">Failed to load data: ${err.message}</span>`;
+      `<span style="color:#b91c1c">Failed to load data:  ${err.message}</span>`;
     console.error(err);
   }
 })();
