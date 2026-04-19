@@ -1060,11 +1060,11 @@ function renderComparison() {
   const nameB = BOROUGH_LIST.find(b => b[0] === codeB)?.[1] || codeB;
 
   const indicators = [
-    { key: 'rent_to_income',       label: 'Rent-to-income',        fmt: v => v.toFixed(1)+'%',                    stress: true  },
-    { key: 'fuel_poverty',         label: 'Fuel poverty rate',     fmt: v => v.toFixed(1)+'%',                    stress: true  },
-    { key: 'house_price_earnings', label: 'House price/earnings',  fmt: v => v.toFixed(1)+'x',                    stress: true  },
-    { key: 'gdhi_per_head',        label: 'GDHI per head',         fmt: v => '£'+Math.round(v).toLocaleString(),  stress: false },
-  ];
+      { key: 'rent_to_income',       label: 'Rent-to-income',        year: '2022–23', fmt: v => v.toFixed(1)+'%',                    stress: true  },
+      { key: 'fuel_poverty',         label: 'Fuel poverty rate',     year: '2022',    fmt: v => v.toFixed(1)+'%',                    stress: true  },
+      { key: 'house_price_earnings', label: 'House price/earnings',  year: '2024',    fmt: v => v.toFixed(1)+'x',                    stress: true  },
+      { key: 'gdhi_per_head',        label: 'GDHI per head',         year: '2023',    fmt: v => '£'+Math.round(v).toLocaleString(),  stress: false },
+    ];
 
   // Build header cards
   const headerHTML = `
@@ -1108,8 +1108,7 @@ function renderComparison() {
     rowsHTML += `
       <div style="${border}padding:0.8rem 1rem;">
         <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;align-items:center;margin-bottom:6px;">
-          <div style="font-size:13px;color:var(--ink-mid);font-weight:500;">${ind.label}</div>
-          <div style="font-size:14px;font-weight:700;color:var(--accent);text-align:right;">${vA != null ? ind.fmt(vA) : '—'}</div>
+          <div style="font-size:13px;color:var(--ink-mid);font-weight:500;">${ind.label}<span style="font-size:10px;font-weight:400;color:var(--ink-faint);margin-left:5px;">${ind.year}</span></div>          <div style="font-size:14px;font-weight:700;color:var(--accent);text-align:right;">${vA != null ? ind.fmt(vA) : '—'}</div>
           <div style="font-size:14px;font-weight:700;color:#b91c1c;text-align:right;">${vB != null ? ind.fmt(vB) : '—'}</div>
           <div style="font-size:13px;font-weight:600;color:${diffColor};text-align:right;">${diffLabel}${diffArrow}</div>
         </div>
