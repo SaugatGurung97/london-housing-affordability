@@ -405,6 +405,10 @@
       <label class="toggle-row" id="toggle-rti">
         <input type="checkbox" id="layer-rti"> Rent-to-income — above avg boroughs
       </label>
+      <div style="margin-top:8px;font-size:11px;color:var(--ink-faint);line-height:1.8;">
+        <span style="display:inline-block;width:18px;height:3px;background:#b45309;border:1px dashed #b45309;vertical-align:middle;margin-right:5px;"></span>High fuel poverty<br>
+        <span style="display:inline-block;width:18px;height:3px;background:#1d4ed8;vertical-align:middle;margin-right:5px;"></span>High rent burden
+      </div>
     </div>
 
     <div class="panel-section">
@@ -881,13 +885,13 @@ function buildRtiOverlay() {
       style: {
         fillColor:   'transparent',
         fillOpacity: 0,
-        color:       '#b45309',
-        weight:      3,
-        opacity:     0.9,
-        dashArray:   '6 3',
+        color:       '#1d4ed8',
+        weight:      3.5,
+        opacity:     0.85,
+        dashArray:   null,
       },
     }).bindTooltip(
-      `<strong>${name}</strong><br>Rent-to-income: <b>${val.toFixed(1)}%</b><br><span style="color:#fbbf24">Above London avg (${avg.toFixed(1)}%)</span>`,
+      `<strong>${name}</strong><br>Rent-to-income: <b>${val.toFixed(1)}%</b><br><span style="color:#93c5fd">Above London avg (${avg.toFixed(1)}%)</span>`,
       { className: 'bl-tooltip', sticky: true }
     );
 
