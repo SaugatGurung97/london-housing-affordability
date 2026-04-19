@@ -400,10 +400,10 @@
     <div class="panel-section">
       <div class="panel-label">Overlay layers</div>
       <label class="toggle-row" id="toggle-fuel">
-        <input type="checkbox" id="layer-fuel"> Fuel poverty indicator
+        <input type="checkbox" id="layer-fuel"> Fuel poverty — above avg boroughs
       </label>
       <label class="toggle-row" id="toggle-rti">
-        <input type="checkbox" id="layer-rti"> Rent-to-income overlay
+        <input type="checkbox" id="layer-rti"> Rent-to-income — above avg boroughs
       </label>
     </div>
 
@@ -813,8 +813,16 @@ function buildFuelOverlay() {
   const fpData = allData.fuel_poverty;
   if (!fpData) return;
 
-  // Get latest available fuel poverty year per borough
-  const markers = [];
+  // Calculate London average fuel poverty rate
+  const allRates = Object.values(fpData)
+    .map(b => { const y = Object.keys(b.values).sort().reverse()[0]; return b.values[y]; })
+    .filter(v => v != null);
+  const avg = allRates.reduce((a, b) => a + b, 0) / allRates.length;
+
+  // Highlight boroughs ABOVE average fuel poverty with an amber fill + dashed border
+  // Designed to overlay on top of the base choropleth to show compounded stress —
+  // boroughs where BOTH the primary metric AND fuel poverty are elevated
+  const layers = [];
   geojson.features.forEach(feature => {
     const code = feature.properties.gss_code;
     const name = feature.properties.name;
@@ -823,31 +831,28 @@ function buildFuelOverlay() {
     const values = fpData[code].values;
     const latestYear = Object.keys(values).sort().reverse()[0];
     const rate = values[latestYear];
-    if (rate == null) return;
+    if (rate == null || rate <= avg) return;
 
-    // Get borough centroid from bounds
-    const layer = L.geoJSON(feature);
-    const centre = layer.getBounds().getCenter();
-
-    // Circle radius scaled to fuel poverty rate (range roughly 5–20%)
-    const radius = (rate / 20) * 18000;
-
-    const circle = L.circle(centre, {
-      radius,
-      color:       '#b45309',
-      fillColor:   '#fbbf24',
-      fillOpacity: 0.35,
-      weight:      1.5,
-      opacity:     0.8,
+    const highlight = L.geoJSON(feature, {
+      style: {
+        fillColor:   '#b45309',
+        fillOpacity: 0.22,
+        color:       '#b45309',
+        weight:      2,
+        opacity:     0.7,
+        dashArray:   '4 3',
+      },
     }).bindTooltip(
-      `<strong>${name}</strong><br>Fuel poverty (${latestYear}): <b>${rate.toFixed(1)}%</b>`,
+      `<strong>${name}</strong><br>` +
+      `Fuel poverty (${latestYear}): <b>${rate.toFixed(1)}%</b><br>` +
+      `<span style="color:#fbbf24">Above London avg (${avg.toFixed(1)}%) — compounded stress</span>`,
       { className: 'bl-tooltip', sticky: true }
     );
 
-    markers.push(circle);
+    layers.push(highlight);
   });
 
-  fuelOverlayLayer = L.layerGroup(markers).addTo(map);
+  fuelOverlayLayer = L.layerGroup(layers).addTo(map);
 }
 
 function buildRtiOverlay() {
