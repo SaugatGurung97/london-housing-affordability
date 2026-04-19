@@ -375,7 +375,10 @@
 <nav>
   <div class="nav-logo">Borough<span>Lens</span></div>
   <div class="nav-subtitle">London Housing Affordability</div>
-  <div class="nav-right">Data: ONS &amp; London Datastore</div>
+  <div class="nav-right" style="display:flex;align-items:center;gap:1rem;">
+    <span>Data: ONS &amp; London Datastore</span>
+    <button id="compare-btn" onclick="openCompare()" style="padding:5px 14px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.03em;">Compare boroughs</button>
+  </div>
 </nav>
 
 <!-- Main layout -->
@@ -887,13 +890,13 @@ function buildRtiOverlay() {
       style: {
         fillColor:   'transparent',
         fillOpacity: 0,
-        color:       '#b45309',
-        weight:      3,
-        opacity:     0.9,
-        dashArray:   '6 3',
+        color:       '#1d4ed8',
+        weight:      3.5,
+        opacity:     0.85,
+        dashArray:   null,
       },
     }).bindTooltip(
-      `<strong>${name}</strong><br>Rent-to-income: <b>${val.toFixed(1)}%</b><br><span style="color:#fbbf24">Above London avg (${avg.toFixed(1)}%)</span>`,
+      `<strong>${name}</strong><br>Rent-to-income: <b>${val.toFixed(1)}%</b><br><span style="color:#93c5fd">Above London avg (${avg.toFixed(1)}%)</span>`,
       { className: 'bl-tooltip', sticky: true }
     );
 
@@ -940,6 +943,166 @@ document.getElementById('year-select').addEventListener('change', e => {
 });
 
 document.getElementById('detail-close').addEventListener('click', closeDetail);
+
+// ── COMPARISON VIEW ──────────────────────────────────────────────────────────
+
+const BOROUGH_LIST = [
+  ['E09000001','City of London'],['E09000002','Barking and Dagenham'],
+  ['E09000003','Barnet'],['E09000004','Bexley'],['E09000005','Brent'],
+  ['E09000006','Bromley'],['E09000007','Camden'],['E09000008','Croydon'],
+  ['E09000009','Ealing'],['E09000010','Enfield'],['E09000011','Greenwich'],
+  ['E09000012','Hackney'],['E09000013','Hammersmith and Fulham'],
+  ['E09000014','Haringey'],['E09000015','Harrow'],['E09000016','Havering'],
+  ['E09000017','Hillingdon'],['E09000018','Hounslow'],['E09000019','Islington'],
+  ['E09000020','Kensington and Chelsea'],['E09000021','Kingston upon Thames'],
+  ['E09000022','Lambeth'],['E09000023','Lewisham'],['E09000024','Merton'],
+  ['E09000025','Newham'],['E09000026','Redbridge'],['E09000027','Richmond upon Thames'],
+  ['E09000028','Southwark'],['E09000029','Sutton'],['E09000030','Tower Hamlets'],
+  ['E09000031','Waltham Forest'],['E09000032','Wandsworth'],['E09000033','Westminster'],
+];
+
+function openCompare() {
+  document.getElementById('compare-view').style.display = 'block';
+
+  // Populate dropdowns
+  const opts = BOROUGH_LIST.map(([code, name]) =>
+    `<option value="${code}">${name}</option>`).join('');
+  ['compare-a','compare-b'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = '<option value="">Select a borough...</option>' + opts;
+  });
+
+  // Set defaults — Hackney vs Richmond as a meaningful contrast
+  document.getElementById('compare-a').value = 'E09000012';
+  document.getElementById('compare-b').value = 'E09000027';
+  renderComparison();
+
+  document.getElementById('compare-a').addEventListener('change', renderComparison);
+  document.getElementById('compare-b').addEventListener('change', renderComparison);
+}
+
+function closeCompare() {
+  document.getElementById('compare-view').style.display = 'none';
+}
+
+function getLatest(metric, code) {
+  const b = allData[metric]?.[code];
+  if (!b) return null;
+  const years = Object.keys(b.values).sort().reverse();
+  return b.values[years[0]] ?? null;
+}
+
+function renderComparison() {
+  const codeA = document.getElementById('compare-a').value;
+  const codeB = document.getElementById('compare-b').value;
+  const out   = document.getElementById('compare-output');
+
+  if (!codeA || !codeB) { out.innerHTML = ''; return; }
+  if (codeA === codeB) {
+    out.innerHTML = '<div style="color:var(--ink-faint);font-size:13px;padding:1rem 0;">Select two different boroughs.</div>';
+    return;
+  }
+
+  const nameA = BOROUGH_LIST.find(b => b[0] === codeA)?.[1] || codeA;
+  const nameB = BOROUGH_LIST.find(b => b[0] === codeB)?.[1] || codeB;
+
+  const indicators = [
+    { key: 'rent_to_income',       label: 'Rent-to-income',        fmt: v => v.toFixed(1)+'%',                    stress: true  },
+    { key: 'fuel_poverty',         label: 'Fuel poverty rate',     fmt: v => v.toFixed(1)+'%',                    stress: true  },
+    { key: 'house_price_earnings', label: 'House price/earnings',  fmt: v => v.toFixed(1)+'x',                    stress: true  },
+    { key: 'gdhi_per_head',        label: 'GDHI per head',         fmt: v => '£'+Math.round(v).toLocaleString(),  stress: false },
+  ];
+
+  // Build header cards
+  const headerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+      <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;padding:1rem;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Borough A</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink);">${nameA}</div>
+      </div>
+      <div style="background:#fff0f0;border:1px solid #fca5a5;border-radius:8px;padding:1rem;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#b91c1c;margin-bottom:4px;">Borough B</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink);">${nameB}</div>
+      </div>
+    </div>`;
+
+  // Build indicator comparison rows
+  let rowsHTML = `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.5rem;">`;
+
+  // Table header
+  rowsHTML += `
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;background:var(--panel-bg);padding:0.6rem 1rem;border-bottom:1px solid var(--border);">
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--ink-faint);">Indicator</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--accent);text-align:right;">${nameA.split(' ')[0]}</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#b91c1c;text-align:right;">${nameB.split(' ')[0]}</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--ink-faint);text-align:right;">Difference</div>
+    </div>`;
+
+  indicators.forEach((ind, i) => {
+    const vA = getLatest(ind.key, codeA);
+    const vB = getLatest(ind.key, codeB);
+    const diff = (vA != null && vB != null) ? (ind.stress ? vA - vB : vB - vA) : null;
+    const diffLabel = diff == null ? '—' : (diff > 0 ? '+' : '') + ind.fmt(Math.abs(diff));
+    const diffColor = diff == null ? 'var(--ink-faint)' : diff > 0 ? '#b91c1c' : '#166534';
+    const diffArrow = diff == null ? '' : diff > 0 ? ' ↑' : ' ↓';
+    const border = i < indicators.length - 1 ? 'border-bottom:1px solid var(--border);' : '';
+
+    // Bar visualisation
+    const maxVal = Math.max(vA || 0, vB || 0);
+    const barA = maxVal > 0 && vA != null ? (vA / maxVal * 100).toFixed(0) : 0;
+    const barB = maxVal > 0 && vB != null ? (vB / maxVal * 100).toFixed(0) : 0;
+
+    rowsHTML += `
+      <div style="${border}padding:0.8rem 1rem;">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;align-items:center;margin-bottom:6px;">
+          <div style="font-size:13px;color:var(--ink-mid);font-weight:500;">${ind.label}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--accent);text-align:right;">${vA != null ? ind.fmt(vA) : '—'}</div>
+          <div style="font-size:14px;font-weight:700;color:#b91c1c;text-align:right;">${vB != null ? ind.fmt(vB) : '—'}</div>
+          <div style="font-size:13px;font-weight:600;color:${diffColor};text-align:right;">${diffLabel}${diffArrow}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:4px;align-items:center;">
+          <div></div>
+          <div style="padding:0 0 0 auto;">
+            <div style="height:6px;background:var(--paper-warm);border-radius:3px;overflow:hidden;margin-left:auto;">
+              <div style="height:100%;width:${barA}%;background:#2c5282;border-radius:3px;"></div>
+            </div>
+          </div>
+          <div>
+            <div style="height:6px;background:var(--paper-warm);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${barB}%;background:#b91c1c;border-radius:3px;"></div>
+            </div>
+          </div>
+          <div></div>
+        </div>
+      </div>`;
+  });
+
+  rowsHTML += '</div>';
+
+  // Insight summary
+  const rtiA = getLatest('rent_to_income', codeA);
+  const rtiB = getLatest('rent_to_income', codeB);
+  const fpA  = getLatest('fuel_poverty', codeA);
+  const fpB  = getLatest('fuel_poverty', codeB);
+  let insight = '';
+  if (rtiA != null && rtiB != null) {
+    const higher = rtiA > rtiB ? nameA : nameB;
+    const lower  = rtiA > rtiB ? nameB : nameA;
+    const gap    = Math.abs(rtiA - rtiB).toFixed(1);
+    insight += `<strong>${higher}</strong> has a rent-to-income ratio ${gap} percentage points higher than <strong>${lower}</strong>. `;
+  }
+  if (fpA != null && fpB != null && Math.abs(fpA - fpB) > 1) {
+    const higher = fpA > fpB ? nameA : nameB;
+    insight += `Fuel poverty is notably higher in <strong>${higher}</strong>.`;
+  }
+
+  const insightHTML = insight ? `
+    <div style="background:var(--accent-light);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;padding:0.8rem 1rem;font-size:13px;color:var(--ink-mid);line-height:1.6;">
+      ${insight}
+    </div>` : '';
+
+  out.innerHTML = headerHTML + rowsHTML + insightHTML;
+}
 
 // ── BOROUGH SEARCH ───────────────────────────────────────────────────────────
 
@@ -1039,10 +1202,46 @@ function selectBorough(code, name) {
     document.getElementById('loading').style.display = 'none';
   } catch (err) {
     document.getElementById('loading').innerHTML =
-      `<span style="color:#b91c1c">Failed to load data:  ${err.message}</span>`;
+      `<span style="color:#b91c1c">Failed to load data: ${err.message}</span>`;
     console.error(err);
   }
 })();
 </script>
+
+<!-- ── COMPARISON VIEW ── -->
+<div id="compare-view" style="display:none;position:fixed;inset:0;top:44px;background:var(--paper);z-index:1500;overflow-y:auto;">
+  <div style="max-width:900px;margin:0 auto;padding:2rem 1.5rem;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+      <div>
+        <div style="font-size:20px;font-weight:700;color:var(--ink);">Borough comparison</div>
+        <div style="font-size:12px;color:var(--ink-faint);margin-top:2px;">Select two boroughs to compare across all indicators</div>
+      </div>
+      <button onclick="closeCompare()" style="padding:6px 16px;background:var(--panel-bg);border:1px solid var(--border-mid);border-radius:4px;font-size:13px;cursor:pointer;color:var(--ink);">← Back to map</button>
+    </div>
+
+    <!-- Borough selectors -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px;">Borough A</div>
+        <select id="compare-a" style="width:100%;padding:8px 10px;border:1px solid var(--border-mid);border-radius:4px;font-size:13px;background:#fff;color:var(--ink);">
+          <option value="">Select a borough...</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px;">Borough B</div>
+        <select id="compare-b" style="width:100%;padding:8px 10px;border:1px solid var(--border-mid);border-radius:4px;font-size:13px;background:#fff;color:var(--ink);">
+          <option value="">Select a borough...</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Comparison output -->
+    <div id="compare-output"></div>
+
+  </div>
+</div>
+
 </body>
 </html>
