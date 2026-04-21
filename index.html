@@ -548,7 +548,7 @@ function stressColour(val, min, max) {
   return STRESS_RAMP[i];
 }
 
-// GDHI inverts — higher income = better, so use blue (low) to green (high)
+// GDHI inverts — higher income = better, so  blue (low) to green (high)
 const GDHI_RAMP = ['#dbeafe','#bfdbfe','#93c5fd','#60a5fa','#3b82f6','#1d4ed8'];
 function gdhiColour(val, min, max) {
   if (val == null) return '#e8e7e0';
@@ -595,7 +595,7 @@ function initMap() {
     attributionControl: true,
   });
 
-  // Minimal tile layer — muted to let choropleth colours read clearly
+  // Minimal tile layer 
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
     subdomains: 'abcd',
