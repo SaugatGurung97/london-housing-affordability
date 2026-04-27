@@ -492,6 +492,8 @@
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 
+// Each metric defines its label, unit, data source, format function, and colour scale.
+// The colour function is passed (value, min, max) and returns a hex colour.
 const METRICS = {
   rent_to_income: {
     label:  'Rent-to-income ratio',
@@ -529,6 +531,9 @@ const METRICS = {
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
+// Global state — geojson holds the boundary polygons, allData holds the metric JSONs.
+// activeMetric and activeYear track what the map is currently showing.
+// selectedLayer keeps a reference to the currently clicked borough polygon.
 let geojson    = null;
 let allData    = {};
 let activeMetric = 'rent_to_income';
@@ -539,6 +544,8 @@ let map;
 
 // ── COLOUR SCALES ─────────────────────────────────────────────────────────────
 
+// Six-step red ramp from low stress (pale) to high stress (dark).
+// Single-hue scale is intentional — housing stress is directional with no meaningful midpoint.
 const STRESS_RAMP = ['#fee2e2','#fca5a5','#f87171','#ef4444','#dc2626','#b91c1c'];
 
 function stressColour(val, min, max) {
@@ -548,7 +555,8 @@ function stressColour(val, min, max) {
   return STRESS_RAMP[i];
 }
 
-// GDHI inverts — higher income = better, so  blue (low) to green (high)
+// GDHI uses a blue ramp but inverts the direction — higher income = better, so higher values
+// map to darker blue rather than darker red. — higher income = better, so  blue (low) to green (high)
 const GDHI_RAMP = ['#dbeafe','#bfdbfe','#93c5fd','#60a5fa','#3b82f6','#1d4ed8'];
 function gdhiColour(val, min, max) {
   if (val == null) return '#e8e7e0';
@@ -559,6 +567,8 @@ function gdhiColour(val, min, max) {
 
 // ── DATA LOADING ──────────────────────────────────────────────────────────────
 
+// Fetches all five data files in parallel. GeoJSON provides the borough shapes;
+// the four JSON files provide the metric values keyed by ONS code.
 async function loadAll() {
   const files = [
     'data/london_boroughs.geojson',
@@ -579,6 +589,8 @@ async function loadAll() {
   return { rti, hpe, fp, gdhi };
 }
 
+// Converts the boroughs array into an object keyed by ONS code (e.g. E09000012)
+// so we can do O(1) lookups when binding data to GeoJSON features.
 function indexByCode(boroughs) {
   const map = {};
   boroughs.forEach(b => { map[b.ons_code] = b; });
@@ -615,6 +627,9 @@ function getValues(metric, year) {
   return vals;
 }
 
+// Rebuilds the choropleth from scratch whenever the metric or year changes.
+// The colour scale is calculated dynamically from the actual min/max for the selected year,
+// which maximises contrast but means colours cannot be compared directly across years.
 function renderChoropleth() {
   if (geojsonLayer) geojsonLayer.remove();
 
@@ -742,7 +757,9 @@ function openDetail(code, name) {
   }
 
   // Stat cards
-// Combined stress score
+// Combined stress score: normalise each metric to 0-1 across all boroughs
+// (using latest available year per metric), then average the four scores.
+// GDHI is inverted so that lower income = higher stress, consistent with the other metrics.
   function normScore(metric, code, invert) {
     const vals = Object.values(allData[metric] || {})
       .map(b => b.values?.[Object.keys(b.values).sort().reverse()[0]] ?? null)
@@ -761,6 +778,7 @@ function openDetail(code, name) {
   ].filter(v => v != null);
   const stressScore = scores.length ? Math.round((scores.reduce((a,b)=>a+b,0)/scores.length)*100) : null;
 
+  // Rank the selected borough against all others for the active metric and year.
   const allVals = Object.entries(allData[activeMetric] || {})
     .map(([c, b]) => ({ code: c, val: b.values?.[activeYear] ?? null }))
     .filter(x => x.val != null).sort((a,b) => b.val - a.val);
@@ -807,6 +825,8 @@ function openDetail(code, name) {
   document.getElementById('chart-title').textContent =
     `${METRICS[activeMetric].label} over time`;
 
+  // Show the last 8 years maximum to keep the chart readable.
+  // Calculate the London-wide average for each year so we can draw a reference line.
   const recentYears = years.slice(-8);
   const londonAvgByYear = {};
   recentYears.forEach(year => {
@@ -881,6 +901,9 @@ function updateDataNote(metric, year) {
 let fuelOverlayLayer = null;
 let rtiOverlayLayer  = null;
 
+// Fuel poverty overlay: highlights boroughs above the London average fuel poverty rate
+// with an amber semi-transparent fill and dashed border. Designed to be layered on top
+// of the base choropleth to reveal boroughs with compounded affordability stress.
 function buildFuelOverlay() {
   if (fuelOverlayLayer) fuelOverlayLayer.remove();
   const fpData = allData.fuel_poverty;
@@ -917,6 +940,9 @@ function buildFuelOverlay() {
   });
   fuelOverlayLayer = L.layerGroup(layers).addTo(map);
 }
+// Rent-to-income overlay: draws a solid blue border on boroughs above the London
+// average rent-to-income ratio. Blue distinguishes it visually from the amber fuel overlay
+// so both can be active simultaneously to show spatial overlap.
 function buildRtiOverlay() {
   if (rtiOverlayLayer) rtiOverlayLayer.remove();
 
@@ -1038,6 +1064,8 @@ function closeCompare() {
   document.getElementById('compare-view').style.display = 'none';
 }
 
+// Returns the most recent available value for a given metric and borough.
+// Used in the comparison view where each metric may have a different latest year.
 function getLatest(metric, code) {
   const b = allData[metric]?.[code];
   if (!b) return null;
@@ -1158,6 +1186,8 @@ function renderComparison() {
 
 // ── BOROUGH SEARCH ───────────────────────────────────────────────────────────
 
+// Borough search: filters GeoJSON feature names in real time as the user types.
+// On selection, zooms the map to that borough and opens the detail panel.
 function initSearch() {
   const input   = document.getElementById('borough-search');
   const results = document.getElementById('search-results');
@@ -1245,6 +1275,8 @@ function selectBorough(code, name) {
 
 // ── METRIC INFO ──────────────────────────────────────────────────────────────
 
+// Static descriptions, sources, and caveats for each metric.
+// Shown when the user clicks the ⓘ Info button next to the metric selector.
 const METRIC_INFO = {
   rent_to_income: {
     desc: 'Median monthly rent as a percentage of estimated monthly income.',
@@ -1292,6 +1324,8 @@ function updateMetricInfo() {
 
 // ── BOOT ──────────────────────────────────────────────────────────────────────
 
+// Boot sequence: initialise the map, load all data files in parallel,
+// then render the default choropleth and wire up the search.
 (async () => {
   try {
     initMap();
