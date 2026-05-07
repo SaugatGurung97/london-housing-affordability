@@ -542,11 +542,12 @@
         display: none;
       }
 
-      .nav-right span {
-        display: none;
-      }
+      #mobile-controls-btn { display: flex !important; }
 
-      #mobile-controls-btn { display: flex; }
+
+      #mobile-controls-btn {
+        display: flex;
+      }
 
     }
 
@@ -559,6 +560,9 @@
         font-size: 16px;
       }
     }
+
+    #mobile-controls-btn { display: none; }
+
   </style>
 </head>
 
@@ -574,11 +578,14 @@
   <nav>
     <div class="nav-logo">Borough<span>Lens</span></div>
     <div class="nav-subtitle">London Housing Affordability</div>
-    <<div class="nav-right" style="display:flex;align-items:center;gap:0.5rem;">
-    <span>Data: ONS &amp; London Datastore</span>
-    <button id="compare-btn" onclick="openCompare()" style="padding:5px 14px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.03em;">Compare boroughs</button>
-    <button id="mobile-controls-btn" onclick="toggleMobileDrawer()" style="display:none;padding:5px 12px;background:var(--panel-bg);border:1px solid var(--border-mid);border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink);">⚙ Controls</button>
-  </div>
+    <div class="nav-right" style="display:flex;align-items:center;gap:0.5rem;">
+      <span>Data: ONS &amp; London Datastore</span>
+      <button id="compare-btn" onclick="openCompare()"
+        style="padding:5px 14px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.03em;">Compare
+        boroughs</button>
+      <button id="mobile-controls-btn" onclick="toggleMobileDrawer()"
+      style="padding:5px 12px;background:var(--panel-bg);border:1px solid var(--border-mid);border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink);">⚙ Controls</button>
+    </div>
   </nav>
 
   <!-- Main layout -->
@@ -1531,6 +1538,20 @@
           ? `<span style="color:var(--amber);">⚠ Derived metric. ${info.note}</span>`
           : `<span style="color:var(--ink-faint);">${info.note}</span>`);
     }
+    // ── MOBILE DRAWER ─────────────────────────────────────────────────────────────
+
+    function toggleMobileDrawer() {
+      const drawer = document.getElementById('mobile-drawer');
+      const isOpen = drawer.style.display === 'block';
+      if (!isOpen) {
+        // Sync drawer selects with current state before opening
+        document.getElementById('mobile-metric-select').value = activeMetric;
+        const mobileYear = document.getElementById('mobile-year-select');
+        mobileYear.innerHTML = document.getElementById('year-select').innerHTML;
+        mobileYear.value = activeYear;
+      }
+      drawer.style.display = isOpen ? 'none' : 'block';
+    }
 
     // ── BOOT ──────────────────────────────────────────────────────────────────────
 
@@ -1552,6 +1573,50 @@
       }
     })();
   </script>
+
+
+
+
+
+  <!-- ── MOBILE CONTROLS DRAWER ── -->
+  <div id="mobile-drawer"
+    style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--panel-bg);border-top:1px solid var(--border);border-radius:12px 12px 0 0;z-index:1200;max-height:70vh;overflow-y:auto;padding-bottom:1rem;box-shadow:0 -4px 20px rgba(0,0,0,0.1);">
+    <div
+      style="display:flex;align-items:center;justify-content:space-between;padding:0.8rem 1rem;border-bottom:1px solid var(--border);">
+      <div style="font-size:13px;font-weight:700;color:var(--ink);">Controls</div>
+      <button onclick="toggleMobileDrawer()"
+        style="background:none;border:none;font-size:18px;color:var(--ink-faint);cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:0.9rem 1rem;border-bottom:1px solid var(--border);">
+      <div class="panel-label">Metric</div>
+      <select
+        onchange="document.getElementById('metric-select').value=this.value;document.getElementById('metric-select').dispatchEvent(new Event('change'));toggleMobileDrawer();"
+        id="mobile-metric-select">
+        <option value="rent_to_income">Rent-to-income ratio</option>
+        <option value="house_price_earnings">House price to earnings</option>
+        <option value="fuel_poverty">Fuel poverty rate</option>
+        <option value="gdhi_per_head">GDHI per head (£)</option>
+      </select>
+    </div>
+    <div style="padding:0.9rem 1rem;border-bottom:1px solid var(--border);">
+      <div class="panel-label">Year</div>
+      <select id="mobile-year-select"
+        onchange="document.getElementById('year-select').value=this.value;document.getElementById('year-select').dispatchEvent(new Event('change'));toggleMobileDrawer();"></select>
+    </div>
+    <div style="padding:0.9rem 1rem;">
+      <div class="panel-label">Overlay layers</div>
+      <label class="toggle-row">
+        <input type="checkbox"
+          onchange="document.getElementById('layer-fuel').checked=this.checked;document.getElementById('layer-fuel').dispatchEvent(new Event('change'));">
+        Fuel poverty — above avg
+      </label>
+      <label class="toggle-row">
+        <input type="checkbox"
+          onchange="document.getElementById('layer-rti').checked=this.checked;document.getElementById('layer-rti').dispatchEvent(new Event('change'));">
+        Rent-to-income — above avg
+      </label>
+    </div>
+  </div>
 
   <!-- ── COMPARISON VIEW ── -->
   <div id="compare-view"
