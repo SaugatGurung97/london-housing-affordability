@@ -545,6 +545,9 @@
       .nav-right span {
         display: none;
       }
+
+      #mobile-controls-btn { display: flex; }
+
     }
 
     @media (max-width: 400px) {
@@ -571,12 +574,11 @@
   <nav>
     <div class="nav-logo">Borough<span>Lens</span></div>
     <div class="nav-subtitle">London Housing Affordability</div>
-    <div class="nav-right" style="display:flex;align-items:center;gap:1rem;">
-      <span>Data: ONS &amp; London Datastore</span>
-      <button id="compare-btn" onclick="openCompare()"
-        style="padding:5px 14px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.03em;">Compare
-        boroughs</button>
-    </div>
+    <<div class="nav-right" style="display:flex;align-items:center;gap:0.5rem;">
+    <span>Data: ONS &amp; London Datastore</span>
+    <button id="compare-btn" onclick="openCompare()" style="padding:5px 14px;background:var(--accent);color:#fff;border:none;border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.03em;">Compare boroughs</button>
+    <button id="mobile-controls-btn" onclick="toggleMobileDrawer()" style="display:none;padding:5px 12px;background:var(--panel-bg);border:1px solid var(--border-mid);border-radius:4px;font-size:12px;font-weight:600;cursor:pointer;color:var(--ink);">⚙ Controls</button>
+  </div>
   </nav>
 
   <!-- Main layout -->
