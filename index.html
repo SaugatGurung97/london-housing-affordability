@@ -492,46 +492,25 @@
     @media (max-width: 700px) {
 
       body {
-        overflow: auto;
+        overflow: hidden;
       }
 
       .layout {
-        flex-direction: column;
-        overflow: auto;
-        height: auto;
+        position: relative;
       }
 
+      /* Hide side panel*/
       .panel {
-        width: 100%;
-        flex-direction: row;
-        overflow-x: auto;
-        overflow-y: hidden;
-        flex-shrink: 0;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        height: auto;
-        scrollbar-width: none;
-      }
-
-      .panel::-webkit-scrollbar {
         display: none;
       }
 
-      .panel-section {
-        flex-shrink: 0;
-        min-width: 160px;
-        border-bottom: none;
-        border-right: 1px solid var(--border);
-        padding: 0.6rem 0.8rem;
-      }
-
+      /* Map takes full screen below nav */
       #map {
         width: 100%;
-        height: 60vh;
-        min-height: 300px;
-        flex-shrink: 0;
+        height: calc(100vh - 44px);
       }
 
+      /* Detail panel slides up from bottom */
       #detail {
         position: fixed;
         top: auto;
