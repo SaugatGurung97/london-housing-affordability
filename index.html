@@ -92,6 +92,8 @@
     /* ── CONTROL PANEL ── */
     .panel {
       width: 260px;
+      min-width: 180px;
+      max-width: 400px;
       flex-shrink: 0;
       background: var(--panel-bg);
       border-right: 1px solid var(--border);
@@ -99,8 +101,26 @@
       display: flex;
       flex-direction: column;
       gap: 0;
+      position: relative;
     }
 
+    .panel-resize {
+      position: absolute;
+      top: 0;
+      right: -4px;
+      width: 8px;
+      height: 100%;
+      cursor: col-resize;
+      z-index: 10;
+      background: transparent;
+    }
+
+    .panel-resize:hover, .panel-resize.dragging {
+      background: var(--accent);
+      opacity: 0.3;
+    }
+
+    
     .panel-section {
       padding: 0.9rem 1rem;
       border-bottom: 1px solid var(--border);
@@ -593,6 +613,9 @@
 
     <!-- Control panel -->
     <div class="panel">
+
+      <div class="panel-resize" id="panel-resize"></div>
+
 
       <div class="panel-section">
         <div class="panel-label">Search borough</div>
@@ -1553,7 +1576,39 @@
       drawer.style.display = isOpen ? 'none' : 'block';
     }
 
-    // ── BOOT ──────────────────────────────────────────────────────────────────────
+
+
+    // ── PANEL RESIZE ─────────────────────────────────────────────────────────────
+
+    const panelEl = document.querySelector('.panel');
+    const resizeHandle = document.getElementById('panel-resize');
+    let isResizing = false;
+
+    resizeHandle.addEventListener('mousedown', e => {
+      isResizing = true;
+      resizeHandle.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!isResizing) return;
+      const newWidth = e.clientX;
+      if (newWidth >= 180 && newWidth <= 400) {
+        panelEl.style.width = newWidth + 'px';
+        map.invalidateSize();
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!isResizing) return;
+      isResizing = false;
+      resizeHandle.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    });
+        // ── BOOT ──────────────────────────────────────────────────────────────────────
 
     // Boot sequence: initialise the map, load all data files in parallel,
     // then render the default choropleth and wire up the search.
