@@ -672,13 +672,13 @@
 
       <div class="panel-section">
         <div class="panel-label">Legend — stress level</div>
-        <div class="legend-ramp">
-          <div style="background:var(--stress-1)"></div>
-          <div style="background:var(--stress-2)"></div>
-          <div style="background:var(--stress-3)"></div>
-          <div style="background:var(--stress-4)"></div>
-          <div style="background:var(--stress-5)"></div>
-          <div style="background:var(--stress-6)"></div>
+        <div class="legend-ramp" id="legend-ramp">
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
         </div>
         <div class="legend-labels">
           <span id="legend-min">Low</span>
@@ -883,6 +883,10 @@
       // Update legend
       document.getElementById('legend-min').textContent = fmtFn(min);
       document.getElementById('legend-max').textContent = fmtFn(max);
+      const ramp = activeMetric === 'gdhi_per_head' ? GDHI_RAMP : STRESS_RAMP;
+      document.querySelectorAll('#legend-ramp div').forEach((el, i) => {
+        el.style.background = ramp[i];
+      });
 
       geojsonLayer = L.geoJSON(geojson, {
         style: feature => {
