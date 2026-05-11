@@ -1234,6 +1234,8 @@
       if (rtiOverlayLayer) { rtiOverlayLayer.remove(); rtiOverlayLayer = null; }
       document.getElementById('layer-fuel').checked = false;
       document.getElementById('layer-rti').checked = false;
+      // Sync mobile drawer checkboxes
+      document.querySelectorAll('#mobile-drawer input[type="checkbox"]').forEach(cb => cb.checked = false);
     }
 
     // ── EVENTS ────────────────────────────────────────────────────────────────────
