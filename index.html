@@ -650,6 +650,7 @@
       <div class="panel-section">
         <div class="panel-label">Year</div>
         <select id="year-select"></select>
+        <div id="year-note" style="display:none;margin-top:6px;font-size:11px;color:var(--amber);background:var(--amber-light);border:1px solid #e9c46a;border-radius:4px;padding:6px 8px;line-height:1.5;"></div>
       </div>
 
       <div class="panel-section">
@@ -943,13 +944,25 @@
     // ── YEAR SELECTOR ─────────────────────────────────────────────────────────────
 
     function populateYears(metric) {
-      const sel = document.getElementById('year-select');
-      const data = Object.values(allData[metric])[0];
-      if (!data) return;
-      const years = Object.keys(data.values).sort().reverse();
-      sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
-      activeYear = years[0];
+    const sel = document.getElementById('year-select');
+    const data = Object.values(allData[metric])[0];
+    if (!data) return;
+    const years = Object.keys(data.values).sort().reverse();
+    sel.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+    activeYear = years[0];
+
+    // Show a note if only one year is available
+    const note = document.getElementById('year-note');
+    if (years.length === 1) {
+      sel.disabled = true;
+      note.textContent = 'Single year snapshot — no temporal data available for this metric.';
+      note.style.display = 'block';
+    } else {
+      sel.disabled = false;
+      note.textContent = '';
+      note.style.display = 'none';
     }
+  }
 
     // ── DETAIL PANEL ──────────────────────────────────────────────────────────────
 
