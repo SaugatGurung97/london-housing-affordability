@@ -868,6 +868,38 @@
       return vals;
     }
 
+
+    //  thresholds per metric so stress classification is absolute,
+    // not relative to the current dataset range
+    function getStressClass(metric, val) {
+      const thresholds = {
+        rent_to_income:       { high: 60,    mid: 45 },
+        house_price_earnings: { high: 15,    mid: 10 },
+        fuel_poverty:         { high: 15,    mid: 10 },
+        gdhi_per_head:        { high: 35000, mid: 25000 },
+      };
+      const t = thresholds[metric];
+      if (!t) return '';
+      if (metric === 'gdhi_per_head') {
+        return val > t.high ? 'stress-low' : val > t.mid ? 'stress-mid' : 'stress-high';
+      }
+      return val > t.high ? 'stress-high' : val > t.mid ? 'stress-mid' : 'stress-low';
+    }
+
+    function getStressLabel(metric, val) {
+      const thresholds = {
+        rent_to_income:       { high: 60,    mid: 45 },
+        house_price_earnings: { high: 15,    mid: 10 },
+        fuel_poverty:         { high: 15,    mid: 10 },
+        gdhi_per_head:        { high: 35000, mid: 25000 },
+      };
+      const t = thresholds[metric];
+      if (!t) return '';
+      if (metric === 'gdhi_per_head') {
+        return val > t.high ? 'Higher income' : val > t.mid ? 'Mid income' : 'Lower income';
+      }
+      return val > t.high ? 'High stress' : val > t.mid ? 'Moderate' : 'Low stress';
+    }
     // Rebuilds the choropleth from scratch whenever the metric or year changes.
     // The colour scale is calculated dynamically from the actual min/max for the selected year,
     // which maximises contrast but means colours cannot be compared directly across years.
@@ -910,8 +942,8 @@
           layer.on('mouseover', function (e) {
             this.setStyle({ weight: 2.5, color: '#1a1a18' });
             const label = val != null ? fmtFn(val) : 'No data';
-            const stressClass = val == null ? '' : val > (max * 0.66) ? 'stress-high' : val > (max * 0.33) ? 'stress-mid' : 'stress-low';
-            const stressText = val == null ? '' : val > (max * 0.66) ? 'High stress' : val > (max * 0.33) ? 'Moderate' : 'Low stress';
+            const stressClass = val == null ? '' : getStressClass(activeMetric, val);
+            const stressText = val == null ? '' : getStressLabel(activeMetric, val);
             this.bindTooltip(`
           <strong>${name}</strong>
           ${METRICS[activeMetric].label}: <b>${label}</b><br>
@@ -1358,17 +1390,16 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;">
       <div style="background:var(--accent-light);border:1px solid var(--accent);border-radius:8px;padding:1rem;">
         <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;">Borough A</div>
-        <div style="font-size:22px;font-weight:700;color:var(--ink);">${nameA}</div>
+        <div style="font-size:16px;font-weight:700;color:var(--ink);word-break:break-word;">${nameA}</div>
       </div>
       <div style="background:#fff0f0;border:1px solid #fca5a5;border-radius:8px;padding:1rem;">
         <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#b91c1c;margin-bottom:4px;">Borough B</div>
-        <div style="font-size:22px;font-weight:700;color:var(--ink);">${nameB}</div>
+        <div style="font-size:16px;font-weight:700;color:var(--ink);word-break:break-word;">${nameB}</div>
       </div>
     </div>`;
 
       // Build indicator comparison rows
-      let rowsHTML = `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.5rem;">`;
-
+      let rowsHTML = `<div style="background:#fff;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.5rem;overflow-x:auto;">`;
       // Table header
       rowsHTML += `
     <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;background:var(--panel-bg);padding:0.6rem 1rem;border-bottom:1px solid var(--border);">
@@ -1394,27 +1425,27 @@
 
         rowsHTML += `
       <div style="${border}padding:0.8rem 1rem;">
-        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;align-items:center;margin-bottom:6px;">
-          <div style="font-size:13px;color:var(--ink-mid);font-weight:500;">${ind.label}<span style="font-size:10px;font-weight:400;color:var(--ink-faint);margin-left:5px;">${ind.year}</span></div>          <div style="font-size:14px;font-weight:700;color:var(--accent);text-align:right;">${vA != null ? ind.fmt(vA) : '—'}</div>
-          <div style="font-size:14px;font-weight:700;color:#b91c1c;text-align:right;">${vB != null ? ind.fmt(vB) : '—'}</div>
-          <div style="font-size:13px;font-weight:600;color:${diffColor};text-align:right;">${diffLabel}${diffArrow}</div>
+        <div style="font-size:12px;color:var(--ink-mid);font-weight:600;margin-bottom:8px;">
+          ${ind.label} <span style="font-size:10px;font-weight:400;color:var(--ink-faint);">${ind.year}</span>
         </div>
-        <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:4px;align-items:center;">
-          <div></div>
-          <div style="padding:0 0 0 auto;">
-            <div style="height:6px;background:var(--paper-warm);border-radius:3px;overflow:hidden;margin-left:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;flex:1;">
+            <div style="font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.05em;">${nameA.split(' ')[0].toUpperCase()}</div>
+            <div style="font-size:16px;font-weight:700;color:var(--accent);">${vA != null ? ind.fmt(vA) : '—'}</div>
+            <div style="height:6px;background:var(--paper-warm);border-radius:3px;overflow:hidden;width:100%;max-width:80px;">
               <div style="height:100%;width:${barA}%;background:#2c5282;border-radius:3px;"></div>
             </div>
           </div>
-          <div>
-            <div style="height:6px;background:var(--paper-warm);border-radius:3px;overflow:hidden;">
+          <div style="font-size:13px;font-weight:700;color:${diffColor};text-align:center;min-width:40px;">${diffLabel}${diffArrow}</div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:1;">
+            <div style="font-size:10px;font-weight:700;color:#b91c1c;letter-spacing:0.05em;">${nameB.split(' ')[0].toUpperCase()}</div>
+            <div style="font-size:16px;font-weight:700;color:#b91c1c;">${vB != null ? ind.fmt(vB) : '—'}</div>
+            <div style="height:6px;background:var(--paper-warm);border-radius:3px;overflow:hidden;width:100%;max-width:80px;">
               <div style="height:100%;width:${barB}%;background:#b91c1c;border-radius:3px;"></div>
             </div>
           </div>
-          <div></div>
         </div>
       </div>`;
-      });
 
       rowsHTML += '</div>';
 
